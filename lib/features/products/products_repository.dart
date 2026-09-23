@@ -110,6 +110,8 @@ class ProductsNotifier extends AsyncNotifier<ProductsState> {
   String? _category;
   int _requestId = 0;
 
+  String? get category => _category;
+
   @override
   Future<ProductsState> build() => _loadFirstPage(
         search: _search,

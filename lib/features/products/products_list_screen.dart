@@ -57,7 +57,7 @@ class _ProductsListScreenState extends ConsumerState<ProductsListScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(productsProvider);
-    final selectedCategory = state.valueOrNull?.category;
+    final selectedCategory = ref.watch(productsProvider.notifier).category;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Products')),
