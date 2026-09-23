@@ -1,2 +1,8 @@
 pr:
   base_branch: dev
+
+review_agents:
+  review:
+    agent: codex
+  test:
+    agent: codex
