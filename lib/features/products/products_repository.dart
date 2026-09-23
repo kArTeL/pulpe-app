@@ -203,6 +203,7 @@ class ProductSearchNotifier extends AsyncNotifier<ProductSearchState> {
   static const _debounceDuration = Duration(milliseconds: 400);
 
   Timer? _debounce;
+  int _requestGeneration = 0;
 
   @override
   Future<ProductSearchState> build() {
@@ -221,14 +222,22 @@ class ProductSearchNotifier extends AsyncNotifier<ProductSearchState> {
     return inputs.copyWith(result: result);
   }
 
+  Future<void> _fetchAndApply(ProductSearchState inputs) async {
+    final generation = ++_requestGeneration;
+    state = const AsyncValue.loading();
+    final result = await AsyncValue.guard(() => _fetch(inputs));
+    if (generation == _requestGeneration) {
+      state = result;
+    }
+  }
+
   void setQueryText(String text) {
     _debounce?.cancel();
     final current = state.valueOrNull ?? const ProductSearchState();
     final inputs = current.copyWith(queryText: text, page: 1);
 
-    _debounce = Timer(_debounceDuration, () async {
-      state = const AsyncValue.loading();
-      state = await AsyncValue.guard(() => _fetch(inputs));
+    _debounce = Timer(_debounceDuration, () {
+      unawaited(_fetchAndApply(inputs));
     });
   }
 
@@ -241,8 +250,7 @@ class ProductSearchNotifier extends AsyncNotifier<ProductSearchState> {
       page: 1,
     );
 
-    state = const AsyncValue.loading();
-    state = await AsyncValue.guard(() => _fetch(inputs));
+    await _fetchAndApply(inputs);
   }
 
   Future<void> goToPage(int page) async {
@@ -250,15 +258,13 @@ class ProductSearchNotifier extends AsyncNotifier<ProductSearchState> {
     final current = state.valueOrNull ?? const ProductSearchState();
     final inputs = current.copyWith(page: page);
 
-    state = const AsyncValue.loading();
-    state = await AsyncValue.guard(() => _fetch(inputs));
+    await _fetchAndApply(inputs);
   }
 
   Future<void> retry() async {
     _debounce?.cancel();
     final inputs = state.valueOrNull ?? const ProductSearchState();
 
-    state = const AsyncValue.loading();
-    state = await AsyncValue.guard(() => _fetch(inputs));
+    await _fetchAndApply(inputs);
   }
 }
