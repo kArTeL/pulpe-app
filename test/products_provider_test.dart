@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -131,6 +132,126 @@ void main() {
           .setSearch('no such product');
 
       final state = container.read(productsProvider).value!;
+      expect(state.products, isEmpty);
+    });
+
+    test(
+        'reload after a failed setSearch preserves the active search filter '
+        'instead of reverting to the unfiltered list', () async {
+      var shouldFail = false;
+      final client = MockClient((request) async {
+        if (shouldFail) {
+          return http.Response(
+            jsonEncode({
+              'error': {
+                'code': 'server_error',
+                'message': 'boom',
+                'details': <String, dynamic>{},
+              }
+            }),
+            500,
+            headers: {'content-type': 'application/json; charset=utf-8'},
+          );
+        }
+        final search = request.url.queryParameters['search'];
+        final results = [
+          _product('1', 'Arroz Tío Pelón'),
+          _product('2', 'Frijoles Rojos'),
+        ].where((p) {
+          if (search == null) return true;
+          return (p['name'] as String)
+              .toLowerCase()
+              .contains(search.toLowerCase());
+        }).toList();
+        return http.Response(
+          jsonEncode(_paged(results)),
+          200,
+          headers: {'content-type': 'application/json; charset=utf-8'},
+        );
+      });
+
+      final container = ProviderContainer(
+        overrides: [
+          apiClientProvider.overrideWithValue(ApiClient(client: client)),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(productsProvider.future);
+
+      shouldFail = true;
+      await container.read(productsProvider.notifier).setSearch('Arroz');
+      expect(container.read(productsProvider).hasError, isTrue);
+      // The notifier keeps the active filter even though the async state
+      // carries no value while it's an error.
+      expect(container.read(productsProvider.notifier).category, isNull);
+
+      shouldFail = false;
+      await container.read(productsProvider.notifier).reload();
+
+      final state = container.read(productsProvider).value!;
+      expect(state.search, 'Arroz');
+      expect(state.products, hasLength(1));
+      expect(state.products.single.name, 'Arroz Tío Pelón');
+    });
+
+    test(
+        'a stale in-flight request does not overwrite the result of a newer '
+        'filter change', () async {
+      var callCount = 0;
+      final firstCallGate = Completer<void>();
+      final client = MockClient((request) async {
+        callCount++;
+        if (callCount == 2) {
+          // The first setSearch call: block it so the second, newer
+          // setCategory call can resolve first.
+          await firstCallGate.future;
+        }
+        final search = request.url.queryParameters['search'];
+        final category = request.url.queryParameters['category'];
+
+        var results = [
+          _product('1', 'Arroz Tío Pelón'),
+          _product('2', 'Frijoles Rojos'),
+        ];
+        if (search != null) {
+          results = results
+              .where((p) => (p['name'] as String)
+                  .toLowerCase()
+                  .contains(search.toLowerCase()))
+              .toList();
+        }
+        if (category != null && category != 'abarrotes') {
+          results = [];
+        }
+        return http.Response(
+          jsonEncode(_paged(results)),
+          200,
+          headers: {'content-type': 'application/json; charset=utf-8'},
+        );
+      });
+
+      final container = ProviderContainer(
+        overrides: [
+          apiClientProvider.overrideWithValue(ApiClient(client: client)),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(productsProvider.future);
+
+      final notifier = container.read(productsProvider.notifier);
+      final searchFuture = notifier.setSearch('Arroz');
+      final categoryFuture = notifier.setCategory('lacteos');
+
+      // Let the newer (category) request resolve first, then release the
+      // older, stale search request.
+      await categoryFuture;
+      firstCallGate.complete();
+      await searchFuture;
+
+      final state = container.read(productsProvider).value!;
+      expect(state.category, 'lacteos');
       expect(state.products, isEmpty);
     });
   });

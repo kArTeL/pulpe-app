@@ -42,7 +42,7 @@ Search and category filters SHALL compose with the existing pagination/infinite-
 
 #### Scenario: Filtered result set is empty
 - **WHEN** a search and/or category filter produces zero results
-- **THEN** the screen SHALL show the existing empty state, not a new or different UI state
+- **THEN** the screen SHALL show an empty state indicating no products match the active search or filter, distinct from the unfiltered empty-catalog message
 
 #### Scenario: Filtered request fails
 - **WHEN** a request for a filtered page fails
