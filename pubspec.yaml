@@ -1,5 +1,5 @@
 name: pulpe_app
-description: App de catálogo e inventario para pulperías y minisúper.
+description: Catalog and inventory app for corner stores and mini markets.
 publish_to: "none"
 version: 0.4.2+12
 

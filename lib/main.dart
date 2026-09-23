@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'features/products/productos_lista_screen.dart';
+import 'features/products/products_list_screen.dart';
 
 void main() {
   runApp(const ProviderScope(child: PulpeApp()));
@@ -18,6 +18,6 @@ class PulpeApp extends StatelessWidget {
           colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF2F6F4E)),
           useMaterial3: true,
         ),
-        home: const ProductosListaScreen(),
+        home: const ProductsListScreen(),
       );
 }

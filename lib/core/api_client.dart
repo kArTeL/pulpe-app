@@ -4,92 +4,92 @@ import 'package:http/http.dart' as http;
 
 import 'config.dart';
 
-/// Error que viene del backend con el formato estándar de la API:
-/// { "error": { "codigo": "...", "mensaje": "...", "detalles": {} } }
+/// Error coming from the backend in the API's standard format:
+/// { "error": { "code": "...", "message": "...", "details": {} } }
 class ApiException implements Exception {
   ApiException({
     required this.status,
-    required this.codigo,
-    required this.mensaje,
+    required this.code,
+    required this.message,
   });
 
   final int status;
-  final String codigo;
-  final String mensaje;
+  final String code;
+  final String message;
 
-  /// 422: mandamos parámetros que el backend no reconoce o no acepta.
-  /// Casi siempre significa que el nombre de un query param no coincide
-  /// con el contrato. Ver AGENTS.md → "Contrato de la API".
-  bool get esParametrosInvalidos => codigo == 'parametros_invalidos';
+  /// 422: we sent parameters the backend doesn't recognize or accept.
+  /// Almost always means a query param name doesn't match the contract.
+  /// See AGENTS.md → "API contract".
+  bool get isInvalidParams => code == 'invalid_params';
 
   @override
-  String toString() => 'ApiException($status, $codigo): $mensaje';
+  String toString() => 'ApiException($status, $code): $message';
 }
 
-/// Error de red: sin conexión, timeout, host inalcanzable.
-class RedException implements Exception {
-  RedException(this.mensaje);
-  final String mensaje;
+/// Network error: no connection, timeout, unreachable host.
+class NetworkException implements Exception {
+  NetworkException(this.message);
+  final String message;
 
   @override
-  String toString() => 'RedException: $mensaje';
+  String toString() => 'NetworkException: $message';
 }
 
 class ApiClient {
-  ApiClient({http.Client? cliente}) : _cliente = cliente ?? http.Client();
+  ApiClient({http.Client? client}) : _client = client ?? http.Client();
 
-  final http.Client _cliente;
+  final http.Client _client;
 
-  /// GET contra la API.
+  /// GET against the API.
   ///
-  /// [query] se manda tal cual: las llaves DEBEN estar en snake_case porque
-  /// así está definido el contrato del backend. Los valores se convierten a
-  /// String; una lista se manda repitiendo la llave (?categoria=a&categoria=b).
+  /// [query] is sent as-is: keys MUST be snake_case because that's how the
+  /// backend contract is defined. Values are converted to String; a list is
+  /// sent by repeating the key (?category=a&category=b).
   Future<Map<String, dynamic>> get(
-    String ruta, {
+    String path, {
     Map<String, dynamic>? query,
   }) async {
-    final uri = Uri.parse('${Config.apiBaseUrl}$ruta').replace(
-      queryParameters: _normalizarQuery(query),
+    final uri = Uri.parse('${Config.apiBaseUrl}$path').replace(
+      queryParameters: _normalizeQuery(query),
     );
 
-    final http.Response respuesta;
+    final http.Response response;
     try {
-      respuesta = await _cliente.get(uri).timeout(Config.timeout);
+      response = await _client.get(uri).timeout(Config.timeout);
     } catch (error) {
-      throw RedException('No se pudo conectar con el servidor.');
+      throw NetworkException('Could not connect to the server.');
     }
 
-    final cuerpo = jsonDecode(utf8.decode(respuesta.bodyBytes)) as Map<String, dynamic>;
+    final body = jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
 
-    if (respuesta.statusCode >= 400) {
-      final error = cuerpo['error'] as Map<String, dynamic>? ?? const {};
+    if (response.statusCode >= 400) {
+      final error = body['error'] as Map<String, dynamic>? ?? const {};
       throw ApiException(
-        status: respuesta.statusCode,
-        codigo: error['codigo'] as String? ?? 'desconocido',
-        mensaje: error['mensaje'] as String? ?? 'Error inesperado del servidor.',
+        status: response.statusCode,
+        code: error['code'] as String? ?? 'unknown',
+        message: error['message'] as String? ?? 'Unexpected server error.',
       );
     }
 
-    return cuerpo;
+    return body;
   }
 
-  Map<String, dynamic>? _normalizarQuery(Map<String, dynamic>? query) {
+  Map<String, dynamic>? _normalizeQuery(Map<String, dynamic>? query) {
     if (query == null || query.isEmpty) return null;
 
-    final resultado = <String, dynamic>{};
-    query.forEach((llave, valor) {
-      if (valor == null) return;
-      if (valor is Iterable) {
-        final lista = valor.map((e) => e.toString()).toList();
-        if (lista.isNotEmpty) resultado[llave] = lista;
+    final result = <String, dynamic>{};
+    query.forEach((key, value) {
+      if (value == null) return;
+      if (value is Iterable) {
+        final list = value.map((e) => e.toString()).toList();
+        if (list.isNotEmpty) result[key] = list;
       } else {
-        resultado[llave] = valor.toString();
+        result[key] = value.toString();
       }
     });
 
-    return resultado.isEmpty ? null : resultado;
+    return result.isEmpty ? null : result;
   }
 
-  void dispose() => _cliente.close();
+  void dispose() => _client.close();
 }

@@ -1,14 +1,14 @@
 # AGENTS.md — pulpe-app
 
-Instrucciones para cualquier agente de código que trabaje en este repo.
-Si algo acá contradice lo que creés que es la convención "normal" de Flutter, gana este archivo.
+Instructions for any code agent working in this repo.
+If anything here contradicts what you think is the "normal" Flutter convention, this file wins.
 
-## Qué es esto
+## What this is
 
-App de catálogo e inventario para pulperías y minisúper. Flutter 3.5+, Riverpod, `http`.
-Consume la API del repo `pulpe-api`.
+Catalog and inventory app for corner stores and mini markets. Flutter 3.5+, Riverpod, `http`.
+Consumes the API from the `pulpe-api` repo.
 
-## Comandos
+## Commands
 
 ```bash
 flutter pub get
@@ -17,46 +17,46 @@ flutter analyze
 flutter test
 ```
 
-En el emulador de Android usá `http://10.0.2.2:3000` en vez de `localhost`.
+On the Android emulator use `http://10.0.2.2:3000` instead of `localhost`.
 
-Antes de dar por terminado cualquier cambio: `flutter analyze && flutter test`.
+Before considering any change done: `flutter analyze && flutter test`.
 
-## Contrato de la API
+## API contract
 
-**El backend habla snake_case. Dart habla camelCase. La traducción ocurre en un solo lugar.**
+**The backend speaks snake_case. Dart speaks camelCase. The translation happens in exactly one place.**
 
-- **Query params:** se arman únicamente en `lib/features/*/\*_repository.dart`, con las llaves en snake_case (`por_pagina`, no `porPagina`).
-- **Respuestas:** el mapeo snake_case → camelCase va únicamente en los `fromJson` de `lib/models/`.
-- Fuera de esos dos lugares, el resto de la app usa camelCase normal de Dart.
+- **Query params:** built only in `lib/features/*/\*_repository.dart`, with keys in snake_case (`per_page`, not `perPage`).
+- **Responses:** the snake_case → camelCase mapping lives only in the `fromJson`s in `lib/models/`.
+- Outside those two places, the rest of the app uses normal Dart camelCase.
 
-Si mandás `sortBy` donde la API espera `sort_by`, el backend responde **422** y la pantalla queda vacía.
-No lo agarra el compilador, ni acá ni allá. La tabla de parámetros vigente está en el `AGENTS.md` de `pulpe-api`.
+If you send `sortBy` where the API expects `sort_by`, the backend responds **422** and the screen stays empty.
+No compiler catches this, on either side. The current parameter table is in `pulpe-api`'s `AGENTS.md`.
 
-Formato de error que devuelve la API:
+Error format returned by the API:
 
 ```json
-{ "error": { "codigo": "parametros_invalidos", "mensaje": "…", "detalles": {} } }
+{ "error": { "code": "invalid_params", "message": "…", "details": {} } }
 ```
 
-`ApiClient` ya lo traduce a `ApiException`; los errores de red salen como `RedException`.
+`ApiClient` already translates it to `ApiException`; network errors come out as `NetworkException`.
 
-## Convenciones de código
+## Code conventions
 
-- **Idioma:** el dominio se nombra en español (`producto`, `precio`, `existencias`). Los símbolos de Flutter quedan en inglés (`build`, `initState`, `ListView`).
-- **Precios:** llegan como enteros en céntimos de colón. Formatear SIEMPRE con `Formato.precio()`, nunca dividir entre 100 dentro de un widget.
-- **Estado:** Riverpod. Un provider por recurso, en el archivo del repositorio de su feature. Nada de `setState` para datos que vengan de la API.
-- **Estructura:** una carpeta por feature en `lib/features/`, con su `_repository.dart` y sus pantallas. Lo compartido va en `lib/core/`.
-- **Red:** todas las llamadas pasan por `ApiClient`. No usar `http` directo en un widget ni en una pantalla.
-- **Widgets:** los privados van en el mismo archivo con prefijo `_`. Constructores `const` donde se pueda.
-- **Configuración:** la URL base se lee con `String.fromEnvironment`. Nunca hardcodear un host en el código.
+- **Language:** domain identifiers are in English (`product`, `price`, `stock`). Flutter symbols stay in English (`build`, `initState`, `ListView`).
+- **Prices:** arrive as integers in colón cents. ALWAYS format with `Format.price()`, never divide by 100 inside a widget.
+- **State:** Riverpod. One provider per resource, in its feature's repository file. No `setState` for data coming from the API.
+- **Structure:** one folder per feature in `lib/features/`, with its `_repository.dart` and its screens. Shared code goes in `lib/core/`.
+- **Networking:** all calls go through `ApiClient`. Don't use `http` directly in a widget or a screen.
+- **Widgets:** private ones live in the same file, prefixed with `_`. `const` constructors wherever possible.
+- **Configuration:** the base URL is read with `String.fromEnvironment`. Never hardcode a host in the code.
 
-## Estados de pantalla
+## Screen states
 
-Toda pantalla que cargue datos tiene que manejar los cuatro casos: **cargando**, **con datos**, **vacío** y **error con botón de reintentar**.
-`ProductosListaScreen` es la referencia; copiá ese patrón.
+Every screen that loads data has to handle all four cases: **loading**, **with data**, **empty** and **error with a retry button**.
+`ProductsListScreen` is the reference; copy that pattern.
 
-## Qué NO hacer
+## What NOT to do
 
-- No agregar dependencias de servicios externos (Firebase, proveedores de push, analítica, storage en la nube). El proyecto corre entero en local, a propósito.
-- No cambiar los `fromJson` para que acepten camelCase: el problema estaría en el contrato, no en el parseo.
-- No borrar ni saltar un test para que pase la suite.
+- Don't add dependencies on external services (Firebase, push providers, analytics, cloud storage). The project runs entirely locally, on purpose.
+- Don't change the `fromJson`s to accept camelCase: the problem would be in the contract, not in the parsing.
+- Don't delete or skip a test to make the suite pass.
