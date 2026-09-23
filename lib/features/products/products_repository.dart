@@ -82,7 +82,6 @@ class ProductsState {
     bool? loadingMore,
     String? search,
     String? category,
-    bool clearCategory = false,
   }) =>
       ProductsState(
         products: products ?? this.products,
@@ -90,7 +89,7 @@ class ProductsState {
         hasNext: hasNext ?? this.hasNext,
         loadingMore: loadingMore ?? this.loadingMore,
         search: search ?? this.search,
-        category: clearCategory ? null : (category ?? this.category),
+        category: category ?? this.category,
       );
 }
 
@@ -107,10 +106,14 @@ final productsProvider =
 class ProductsNotifier extends AsyncNotifier<ProductsState> {
   static const int _perPage = 20;
 
+  String _search = '';
+  String? _category;
+  int _requestId = 0;
+
   @override
   Future<ProductsState> build() => _loadFirstPage(
-        search: '',
-        category: null,
+        search: _search,
+        category: _category,
       );
 
   Future<ProductsState> _loadFirstPage({
@@ -135,40 +138,46 @@ class ProductsNotifier extends AsyncNotifier<ProductsState> {
   }
 
   Future<void> reload() async {
-    final current = state.valueOrNull;
+    final requestId = ++_requestId;
     state = const AsyncValue.loading();
-    state = await AsyncValue.guard(
-      () => _loadFirstPage(
-        search: current?.search ?? '',
-        category: current?.category,
-      ),
+    final result = await AsyncValue.guard(
+      () => _loadFirstPage(search: _search, category: _category),
     );
+    if (requestId != _requestId) return;
+    state = result;
   }
 
   Future<void> setSearch(String value) async {
-    final current = state.valueOrNull;
-    if (current != null && current.search == value) return;
+    if (_search == value) return;
+    _search = value;
+    final requestId = ++_requestId;
 
     state = const AsyncValue.loading();
-    state = await AsyncValue.guard(
-      () => _loadFirstPage(search: value, category: current?.category),
+    final result = await AsyncValue.guard(
+      () => _loadFirstPage(search: value, category: _category),
     );
+    if (requestId != _requestId) return;
+    state = result;
   }
 
   Future<void> setCategory(String? slug) async {
-    final current = state.valueOrNull;
-    if (current != null && current.category == slug) return;
+    if (_category == slug) return;
+    _category = slug;
+    final requestId = ++_requestId;
 
     state = const AsyncValue.loading();
-    state = await AsyncValue.guard(
-      () => _loadFirstPage(search: current?.search ?? '', category: slug),
+    final result = await AsyncValue.guard(
+      () => _loadFirstPage(search: _search, category: slug),
     );
+    if (requestId != _requestId) return;
+    state = result;
   }
 
   Future<void> loadMore() async {
     final current = state.valueOrNull;
     if (current == null || !current.hasNext || current.loadingMore) return;
 
+    final requestId = ++_requestId;
     state = AsyncValue.data(current.copyWith(loadingMore: true));
 
     try {
@@ -180,6 +189,7 @@ class ProductsNotifier extends AsyncNotifier<ProductsState> {
         category: current.category,
       );
 
+      if (requestId != _requestId) return;
       state = AsyncValue.data(
         current.copyWith(
           products: [...current.products, ...result.items],
@@ -189,6 +199,7 @@ class ProductsNotifier extends AsyncNotifier<ProductsState> {
         ),
       );
     } catch (error, stack) {
+      if (requestId != _requestId) return;
       state = AsyncValue.error(error, stack);
     }
   }

@@ -91,7 +91,10 @@ class _ProductsListScreenState extends ConsumerState<ProductsListScreen> {
               ),
               data: (data) {
                 if (data.products.isEmpty) {
-                  return const _EmptyState();
+                  return _EmptyState(
+                    isFiltered:
+                        data.search.isNotEmpty || data.category != null,
+                  );
                 }
 
                 return RefreshIndicator(
@@ -225,14 +228,18 @@ class _ProductRow extends StatelessWidget {
 }
 
 class _EmptyState extends StatelessWidget {
-  const _EmptyState();
+  const _EmptyState({required this.isFiltered});
+
+  final bool isFiltered;
 
   @override
-  Widget build(BuildContext context) => const Center(
+  Widget build(BuildContext context) => Center(
         child: Padding(
-          padding: EdgeInsets.all(32),
+          padding: const EdgeInsets.all(32),
           child: Text(
-            'There are no products in the catalog yet.',
+            isFiltered
+                ? 'No products match your search or filter.'
+                : 'There are no products in the catalog yet.',
             textAlign: TextAlign.center,
           ),
         ),
