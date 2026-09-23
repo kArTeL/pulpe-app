@@ -32,6 +32,15 @@ Before considering any change done: `flutter analyze && flutter test`.
 If you send `sortBy` where the API expects `sort_by`, the backend responds **422** and the screen stays empty.
 No compiler catches this, on either side. The current parameter table is in `pulpe-api`'s `AGENTS.md`.
 
+`GET /products` query params (all optional):
+
+| Param      | Type   | Meaning                                                        |
+|------------|--------|------------------------------------------------------------------|
+| `page`     | int    | Page number, 1-based.                                          |
+| `per_page` | int    | Items per page.                                                |
+| `search`   | string | Case-insensitive partial match against product name or description. |
+| `category` | string | Filters by category slug.                                      |
+
 Error format returned by the API:
 
 ```json

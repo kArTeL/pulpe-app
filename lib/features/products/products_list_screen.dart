@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -6,6 +8,8 @@ import '../../core/format.dart';
 import '../../models/product.dart';
 import 'product_detail_screen.dart';
 import 'products_repository.dart';
+
+const _searchDebounce = Duration(milliseconds: 400);
 
 class ProductsListScreen extends ConsumerStatefulWidget {
   const ProductsListScreen({super.key});
@@ -17,6 +21,8 @@ class ProductsListScreen extends ConsumerStatefulWidget {
 
 class _ProductsListScreenState extends ConsumerState<ProductsListScreen> {
   final ScrollController _scroll = ScrollController();
+  final TextEditingController _searchController = TextEditingController();
+  Timer? _debounce;
 
   @override
   void initState() {
@@ -28,7 +34,16 @@ class _ProductsListScreenState extends ConsumerState<ProductsListScreen> {
   void dispose() {
     _scroll.removeListener(_onScroll);
     _scroll.dispose();
+    _searchController.dispose();
+    _debounce?.cancel();
     super.dispose();
+  }
+
+  void _onSearchChanged(String value) {
+    _debounce?.cancel();
+    _debounce = Timer(_searchDebounce, () {
+      ref.read(productsProvider.notifier).setSearch(value);
+    });
   }
 
   void _onScroll() {
@@ -42,41 +57,128 @@ class _ProductsListScreenState extends ConsumerState<ProductsListScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(productsProvider);
+    final selectedCategory = state.valueOrNull?.category;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Products')),
-      body: state.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => _ErrorState(
-          error: error,
-          onRetry: () => ref.read(productsProvider.notifier).reload(),
-        ),
-        data: (data) {
-          if (data.products.isEmpty) {
-            return const _EmptyState();
-          }
-
-          return RefreshIndicator(
-            onRefresh: () => ref.read(productsProvider.notifier).reload(),
-            child: ListView.separated(
-              controller: _scroll,
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              itemCount: data.products.length + (data.loadingMore ? 1 : 0),
-              separatorBuilder: (_, __) => const Divider(height: 1),
-              itemBuilder: (context, index) {
-                if (index >= data.products.length) {
-                  return const Padding(
-                    padding: EdgeInsets.all(16),
-                    child: Center(child: CircularProgressIndicator()),
-                  );
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+            child: TextField(
+              controller: _searchController,
+              onChanged: _onSearchChanged,
+              decoration: const InputDecoration(
+                hintText: 'Search products…',
+                prefixIcon: Icon(Icons.search),
+                isDense: true,
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ),
+          _CategoryFilterRow(
+            selectedSlug: selectedCategory,
+            onSelected: (slug) =>
+                ref.read(productsProvider.notifier).setCategory(slug),
+          ),
+          const SizedBox(height: 4),
+          Expanded(
+            child: state.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (error, _) => _ErrorState(
+                error: error,
+                onRetry: () => ref.read(productsProvider.notifier).reload(),
+              ),
+              data: (data) {
+                if (data.products.isEmpty) {
+                  return const _EmptyState();
                 }
 
-                return _ProductRow(product: data.products[index]);
+                return RefreshIndicator(
+                  onRefresh: () =>
+                      ref.read(productsProvider.notifier).reload(),
+                  child: ListView.separated(
+                    controller: _scroll,
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    itemCount:
+                        data.products.length + (data.loadingMore ? 1 : 0),
+                    separatorBuilder: (_, __) => const Divider(height: 1),
+                    itemBuilder: (context, index) {
+                      if (index >= data.products.length) {
+                        return const Padding(
+                          padding: EdgeInsets.all(16),
+                          child: Center(child: CircularProgressIndicator()),
+                        );
+                      }
+
+                      return _ProductRow(product: data.products[index]);
+                    },
+                  ),
+                );
               },
             ),
-          );
-        },
+          ),
+        ],
       ),
+    );
+  }
+}
+
+class _CategoryFilterRow extends ConsumerWidget {
+  const _CategoryFilterRow({
+    required this.selectedSlug,
+    required this.onSelected,
+  });
+
+  final String? selectedSlug;
+  final ValueChanged<String?> onSelected;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final categories = ref.watch(categoriesProvider);
+
+    return categories.when(
+      loading: () => const SizedBox(
+        height: 40,
+        child: Center(
+          child: SizedBox(
+            width: 16,
+            height: 16,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        ),
+      ),
+      error: (_, __) => const SizedBox.shrink(),
+      data: (items) {
+        if (items.isEmpty) return const SizedBox.shrink();
+
+        return SizedBox(
+          height: 40,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: ChoiceChip(
+                  label: const Text('All'),
+                  selected: selectedSlug == null,
+                  onSelected: (_) => onSelected(null),
+                ),
+              ),
+              for (final category in items)
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: ChoiceChip(
+                    label: Text(category.name),
+                    selected: selectedSlug == category.slug,
+                    onSelected: (_) => onSelected(category.slug),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
