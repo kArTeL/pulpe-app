@@ -8,3 +8,4 @@ build/
 .vscode/
 ios/Pods/
 android/.gradle/
+.DS_Store

@@ -5,14 +5,14 @@ import '../../core/api_client.dart';
 import '../../core/format.dart';
 import '../../models/product.dart';
 import 'product_detail_screen.dart';
+import 'product_search_screen.dart';
 import 'products_repository.dart';
 
 class ProductsListScreen extends ConsumerStatefulWidget {
   const ProductsListScreen({super.key});
 
   @override
-  ConsumerState<ProductsListScreen> createState() =>
-      _ProductsListScreenState();
+  ConsumerState<ProductsListScreen> createState() => _ProductsListScreenState();
 }
 
 class _ProductsListScreenState extends ConsumerState<ProductsListScreen> {
@@ -44,7 +44,20 @@ class _ProductsListScreenState extends ConsumerState<ProductsListScreen> {
     final state = ref.watch(productsProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Products')),
+      appBar: AppBar(
+        title: const Text('Products'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.search),
+            tooltip: 'Search products',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const ProductSearchScreen(),
+              ),
+            ),
+          ),
+        ],
+      ),
       body: state.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => _ErrorState(
