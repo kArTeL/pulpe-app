@@ -46,6 +46,8 @@ class _ProductSearchScreenState extends ConsumerState<ProductSearchScreen> {
   Widget build(BuildContext context) {
     final state = ref.watch(productSearchProvider);
     final categories = ref.watch(categoriesProvider);
+    final selectedCategory =
+        ref.watch(productSearchProvider.notifier).selectedCategory;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Search products')),
@@ -68,7 +70,7 @@ class _ProductSearchScreenState extends ConsumerState<ProductSearchScreen> {
           categories.when(
             data: (items) => _CategoryFilter(
               categories: items,
-              selected: state.valueOrNull?.category,
+              selected: selectedCategory,
               onSelected: (slug) =>
                   ref.read(productSearchProvider.notifier).selectCategory(slug),
             ),

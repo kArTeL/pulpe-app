@@ -213,6 +213,8 @@ class ProductSearchNotifier extends AsyncNotifier<ProductSearchState> {
   String _query = '';
   String? _category;
 
+  String? get selectedCategory => _category;
+
   @override
   Future<ProductSearchState> build() {
     ref.onDispose(() => _debounceTimer?.cancel());
