@@ -147,8 +147,7 @@ void main() {
       expect(state.page, 1);
     });
 
-    test('loadMore appends items and stops once has_next is false',
-        () async {
+    test('loadMore appends items and stops once has_next is false', () async {
       var page3Requests = 0;
       final client = MockClient((request) async {
         final page = int.parse(request.url.queryParameters['page']!);
@@ -187,8 +186,7 @@ void main() {
       expect(page3Requests, 0);
     });
 
-    test('a stale response does not overwrite a newer search result',
-        () async {
+    test('a stale response does not overwrite a newer search result', () async {
       final completers = {
         'a': Completer<http.Response>(),
         'b': Completer<http.Response>(),

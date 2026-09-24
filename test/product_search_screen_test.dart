@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -88,6 +89,49 @@ void main() {
         findsNothing,
       );
       expect(find.text('No products match your search.'), findsOneWidget);
+    });
+
+    testWidgets(
+        'selected category chip stays selected while the search reloads',
+        (tester) async {
+      final categoriesResponse = _jsonResponse({
+        'items': [
+          {'id': 'c1', 'slug': 'bebidas', 'name': 'Bebidas'},
+        ],
+      });
+
+      final pendingSearch = Completer<http.Response>();
+      final client = MockClient((request) async {
+        if (request.url.path == '/categories') {
+          return categoriesResponse;
+        }
+        if (request.url.queryParameters['category'] == 'bebidas') {
+          return pendingSearch.future;
+        }
+        return _searchResponse();
+      });
+
+      await _pumpScreen(tester, client);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.widgetWithText(ChoiceChip, 'Bebidas'));
+      // One pump: the notifier has moved to AsyncValue.loading() but the
+      // in-flight request for 'bebidas' has not resolved yet.
+      await tester.pump();
+
+      final bebidasChip =
+          tester.widget<ChoiceChip>(find.widgetWithText(ChoiceChip, 'Bebidas'));
+      final allChip =
+          tester.widget<ChoiceChip>(find.widgetWithText(ChoiceChip, 'All'));
+      expect(bebidasChip.selected, isTrue);
+      expect(allChip.selected, isFalse);
+
+      pendingSearch.complete(_searchResponse());
+      await tester.pumpAndSettle();
+
+      final settledChip =
+          tester.widget<ChoiceChip>(find.widgetWithText(ChoiceChip, 'Bebidas'));
+      expect(settledChip.selected, isTrue);
     });
   });
 }

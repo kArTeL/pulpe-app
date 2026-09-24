@@ -104,8 +104,7 @@ class ProductsState {
       );
 }
 
-final productsProvider =
-    AsyncNotifierProvider<ProductsNotifier, ProductsState>(
+final productsProvider = AsyncNotifierProvider<ProductsNotifier, ProductsState>(
   ProductsNotifier.new,
 );
 

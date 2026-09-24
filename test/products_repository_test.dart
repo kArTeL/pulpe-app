@@ -91,8 +91,7 @@ void main() {
       expect(result.hasNext, isTrue);
     });
 
-    test('empty items is a normal successful response, not an error',
-        () async {
+    test('empty items is a normal successful response, not an error', () async {
       final client = MockClient((request) async => _searchResponse());
       final repository = ProductsRepository(ApiClient(client: client));
 

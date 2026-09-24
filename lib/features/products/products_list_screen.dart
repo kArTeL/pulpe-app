@@ -12,8 +12,7 @@ class ProductsListScreen extends ConsumerStatefulWidget {
   const ProductsListScreen({super.key});
 
   @override
-  ConsumerState<ProductsListScreen> createState() =>
-      _ProductsListScreenState();
+  ConsumerState<ProductsListScreen> createState() => _ProductsListScreenState();
 }
 
 class _ProductsListScreenState extends ConsumerState<ProductsListScreen> {

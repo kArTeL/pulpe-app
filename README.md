@@ -23,6 +23,7 @@ flutter run --dart-define=API_BASE_URL=http://10.0.2.2:3000
 
 - **Products** — listing with infinite scroll, pull to refresh, and loading, empty and error states.
 - **Detail** — price, category, stock and description.
+- **Search** — free-text and category search over products, with paginated infinite-scroll results.
 
 ## Conventions
 
